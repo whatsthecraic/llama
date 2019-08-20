@@ -29,3 +29,8 @@ cachegrind.out.*
 gmon.*
 massif.out.*
 
+# Eclipse
+/.cproject
+/.project
+/.settings/
+/eclipse_symbols.xml
