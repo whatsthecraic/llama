@@ -376,8 +376,7 @@ private:
  * an index table with the metadata for each of those levels.
  */
 class ll_persistence_context {
-
-protected:
+public:
 
 	/**
 	 * The metadata for each level

@@ -39,11 +39,7 @@
 
 #include "llama/ll_common.h"
 
-#if GCC_VERSION > 40500 // check for GCC > 4.5
 #include <atomic>
-#else
-#include <cstdatomic>
-#endif // if GCC_VERSION > 40500
 
 #include <sys/mman.h>
 #include <sys/stat.h>

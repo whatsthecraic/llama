@@ -44,6 +44,7 @@
 #include <strings.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
@@ -362,7 +363,7 @@ public:
 		g_tx_write = true;
 #endif
 
-		if (id > _next_new_node_id) _next_new_node_id = id;
+		_next_new_node_id = std::max(id +1, (node_t) _next_new_node_id);
 		if (node_exists(id)) {
 			ll_spinlock_release(&_new_node_lock);
 			return false;

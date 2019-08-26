@@ -349,7 +349,7 @@ void* __w_vt_swcow_page_allocate(void) {
 		long long* x = __free_w_vt_swcow_pages[i];
 
 		if (x != NULL) {
-			if (__sync_bool_compare_and_swap(&__free_w_vt_swcow_pages[i], x, (long*) *x)) {
+			if (__sync_bool_compare_and_swap(&__free_w_vt_swcow_pages[i], x, (long long*) *x)) {
 				return x;
 			}
 		}
