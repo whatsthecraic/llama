@@ -272,7 +272,7 @@ public:
 		_minLevel = master->_minLevel;
 #endif
 
-		_maxLevel = master->_maxLevel;
+		_maxLevel = level;
 
 		_et_write_index = 0;
 		_copy_edge_callback = NULL;
@@ -299,7 +299,8 @@ public:
 				_sparse_length.push_back(master->_sparse_length[i]);
 			}
 
-			_latest_begin = _begin.latest_level();
+//			_latest_begin = _begin.latest_level();
+			_latest_begin = _begin[level];
 			_latest_values = _values[_values.size() - 1];
 
 			_max_nodes = _perLevelNodes[level];
