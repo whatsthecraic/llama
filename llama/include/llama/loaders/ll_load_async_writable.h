@@ -111,7 +111,7 @@ class ll_la_request_queue {
 	// Make sure that the data structure is at least one cache-line in size...
 	// Do we need this?
 	
-	char __fill[64 - sizeof(_lock) - sizeof(_head) - sizeof(_tail)
+	[[maybe_unused]] char __fill[64 - sizeof(_lock) - sizeof(_head) - sizeof(_tail)
 		- sizeof(_shutdown_when_empty)];
 
 

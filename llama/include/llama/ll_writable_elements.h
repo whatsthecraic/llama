@@ -116,7 +116,7 @@ public:
 		};
 
 		/// The next edge in the free list
-		struct w_edge* we_next;
+		class w_edge* we_next;
 	};
 
 	/// A numerical ID

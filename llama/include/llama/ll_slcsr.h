@@ -421,6 +421,8 @@ public:
 		return LL_NIL_EDGE;
 	}
 
+	// Silence the overload function from base class warning
+        using ll_csr_base<LL_VT, ll_slcsr__begin_t, node_t>::write_values;
 
 	/**
 	 * Write a vertex with all of its edges
@@ -441,7 +443,6 @@ public:
 			}
 		}
 	}
-
 
 	/**
 	 * Write a vertex with all of its edges
