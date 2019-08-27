@@ -2033,6 +2033,15 @@ public:
 	}
 
 
+	/**
+	 * Get the difference num_edges_inserted - num_edges_removed in the write store since the last checkpoint
+	 * This method is not thread safe.
+	 */
+	int64_t get_num_edges_diff() const {
+	    return static_cast<int64_t>(_newEdges) - (_delNewEdges + _delFrozenEdges);
+	}
+
+
 private:
 
 	/*
