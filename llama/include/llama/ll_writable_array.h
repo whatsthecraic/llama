@@ -331,6 +331,7 @@ static long long* __free_w_vt_swcow_pages[FREE_W_VT_SWCOW_PAGES_LENGTH] = { NULL
  *
  * @return the page
  */
+inline
 void* __w_vt_swcow_page_new(void) {
 	void* p = malloc(sizeof(long long) * LL_ENTRIES_PER_PAGE);
 	memset(p, 0, sizeof(long long) * LL_ENTRIES_PER_PAGE);
@@ -343,6 +344,7 @@ void* __w_vt_swcow_page_new(void) {
  *
  * @return the page
  */
+inline
 void* __w_vt_swcow_page_allocate(void) {
 
 	for (int i = 0; i < FREE_W_VT_SWCOW_PAGES_LENGTH; i++) {
@@ -364,6 +366,7 @@ void* __w_vt_swcow_page_allocate(void) {
  *
  * @param page the page
  */
+inline
 void __w_vt_swcow_page_deallocate(void* page) {
 
 	int i = (int) ((((long) page) >> 6) % FREE_W_VT_SWCOW_PAGES_LENGTH);
