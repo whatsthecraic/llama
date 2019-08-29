@@ -705,6 +705,12 @@ public:
 		return _out.translate_edge(e);
     }
 
+    /**
+     * Get the corresponding out-edge
+     */
+    edge_t in_to_out(edge_t e){
+        return _in.translate_edge(e);
+    }
 
 	/**
 	 * Get the destination of the edge
