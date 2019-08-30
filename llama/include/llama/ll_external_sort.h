@@ -62,8 +62,7 @@
 #include <string>
 #include <vector>
 
-#include <omp.h>
-
+#include "llama/ll_common.h"
 #include "llama/ll_config.h"
 
 

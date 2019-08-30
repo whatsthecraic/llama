@@ -97,7 +97,8 @@ public:
 	ll_growable_array(int blocks = 16) {
 		_blocks = blocks;
 		_size = 0;
-		_lock = 0;
+//		_lock = 0;
+		pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 		_arrays = (T**) _block_allocator(sizeof(T*) * _blocks);
 		memset(_arrays, 0, sizeof(T*) * _blocks);
 		_arrays[0] = (T*) _block_allocator(sizeof(T) * (1 << _block_size2));
@@ -126,6 +127,7 @@ public:
 			if (use_block_deallocator)
 				_block_deallocator(_arrays);
 		}
+		pthread_spin_destroy(&_lock);
 	}
 
 

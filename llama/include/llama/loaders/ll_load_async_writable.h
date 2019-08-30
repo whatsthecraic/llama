@@ -122,7 +122,8 @@ public:
 	 */
 	ll_la_request_queue() {
 
-		_lock = 0;
+//		_lock = 0;
+	        pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 		_head = NULL;
 		_tail = NULL;
 		_length = 0;
@@ -135,12 +136,12 @@ public:
 	 * Destroy the queue
 	 */
 	virtual ~ll_la_request_queue() {
-
 		while (_head != NULL) {
 			ll_la_request* n = _head->_next;
 			delete _head;
 			_head = n;
 		}
+		pthread_spin_destroy(&_lock);
 	}
 
 

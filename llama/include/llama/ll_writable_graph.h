@@ -123,10 +123,14 @@ public:
 		_delNewEdges.store(0);
 		_delFrozenEdges.store(0);
 
-		_new_node_lock = 0;
-		_deletions_out_lock = 0;
-		_deletions_in_lock = 0;
-		_property_lock = 0;
+//		_new_node_lock = 0;
+		pthread_spin_init(&_new_node_lock, PTHREAD_PROCESS_PRIVATE);
+//		_deletions_out_lock = 0;
+		pthread_spin_init(&_deletions_out_lock, PTHREAD_PROCESS_PRIVATE);
+//		_deletions_in_lock = 0;
+		pthread_spin_init(&_deletions_in_lock, PTHREAD_PROCESS_PRIVATE);
+//		_property_lock = 0;
+		pthread_spin_init(&_property_lock, PTHREAD_PROCESS_PRIVATE);
 
 		_ro_graph.set_deletion_checkers(&_deletions_adapter_out,
 				&_deletions_adapter_in);
@@ -153,6 +157,10 @@ public:
 		delete_free_w_nodes();
 		delete_free_w_edges();
 #endif
+                pthread_spin_destroy(&_new_node_lock);
+                pthread_spin_destroy(&_deletions_out_lock);
+                pthread_spin_destroy(&_deletions_in_lock);
+                pthread_spin_destroy(&_property_lock);
 	}
 	
 
@@ -693,7 +701,7 @@ public:
 		lock_nodes(source, target, p_source, p_target);
 
 		ll_edge_iterator iter;
-		this->out_iter_begin_within_level(iter, source);
+		this->out_iter_begin_within_level(iter, source, p_source);
 		FOREACH_OUTEDGE_ITER_WITHIN_LEVEL(e, *this, iter) {
 			if (iter.last_node == target) {
 				*out = e;
@@ -707,6 +715,63 @@ public:
 
 		*out = e;
 		return true;
+	}
+
+
+	bool delete_edge_if_exists(node_t source, node_t target){
+	    w_node* p_source;
+	    w_node* p_target;
+	    edge_t edge_id = LL_NIL_EDGE;
+	    lock_nodes(source, target, p_source, p_target);
+
+	    // search the edge id in the write store
+	    ll_edge_iterator iter;
+	    this->out_iter_begin_within_level(iter, source, p_source);
+	    for (edge_t e = out_iter_next_within_level(iter); e != LL_NIL_EDGE && edge_id == LL_NIL_EDGE; e = out_iter_next_within_level(iter) ){
+	        if(iter.last_node == target){
+	            edge_id = e; // done
+	        }
+	    }
+
+	    // edge id found ?
+            if (edge_id != LL_NIL_EDGE) {
+                w_edge* w = LL_EDGE_GET_WRITABLE(edge_id);
+
+                assert(source == w->we_source);
+
+                if (w->exists()) {
+                    p_source->wn_out_edges_delta--;
+                    p_target->wn_in_edges_delta--;
+                }
+
+                w->we_deleted = true;
+
+                _delNewEdges++;
+
+            } else { // search the edge in the read-store
+                if (_ro_graph.node_exists(source) && _ro_graph.node_exists(target)) {
+                        edge_id = _ro_graph.find(source, target);
+                }
+
+                if(edge_id == LL_NIL_EDGE) { // edge not found even in the read store?
+                    release_nodes(p_source, p_target);
+                    return false;
+                }
+
+                assert(source == _ro_graph.in().value(_ro_graph.out_to_in(edge_id)));
+
+                // Update the max. level in the CSR
+                if (_ro_graph.update_max_visible_level_lower_only(edge_id, _ro_graph.num_levels())) {
+                    __sync_fetch_and_add(&writable_node(source)->wn_num_deleted_out_edges, 1);
+                    __sync_fetch_and_add(&writable_node(target)->wn_num_deleted_in_edges , 1);
+                    _delFrozenEdges++;              // already atomic
+                }
+
+            }
+
+            release_nodes(p_source, p_target);
+
+            return true;
 	}
 
 
@@ -1303,9 +1368,9 @@ retry:
 	 * @param v the vertex
 	 * @return the iterator
 	 */
-	void out_iter_begin_within_level(ll_edge_iterator& iter, node_t node) {
+	void out_iter_begin_within_level(ll_edge_iterator& iter, node_t node, w_node* r) {
 
-		w_node* r = (w_node*) _vertices.get(node);
+//		w_node* r = (w_node*) _vertices.get(node);
 
 		if (r == NULL) {
 			iter.left = 0;
@@ -2121,20 +2186,23 @@ private:
 	 * @return the node structure
 	 */
 	w_node* lock_node(node_t node) {
+                ll_spinlock_acquire(&_new_node_lock);
 		w_node* r = (w_node*) _vertices.get_or_allocate(node);
-		ll_spinlock_acquire(&r->wn_lock);
 
 		// XXX Does this belong here? Certainly not if we have timestamps,
 		// or if there is any way we need to initialize the node
 		if (node >= _next_new_node_id) {
-			ll_spinlock_acquire(&_new_node_lock);
+//			ll_spinlock_acquire(&_new_node_lock);
 			if (node >= _next_new_node_id) {
 				_next_new_node_id = node + 1;
 				_newNodes++;
 			}
-			ll_spinlock_release(&_new_node_lock);
+//			ll_spinlock_release(&_new_node_lock);
 		}
 
+                ll_spinlock_release(&_new_node_lock);
+
+                ll_spinlock_acquire(&r->wn_lock);
 		return r;
 	}
 

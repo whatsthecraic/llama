@@ -40,6 +40,7 @@
 #include "llama/ll_common.h"
 
 #include <atomic>
+#include <iostream>
 
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -934,7 +935,8 @@ public:
 		_indirection = NULL;
 		_modified_pages = 0;
 
-		_cow_spinlock = 0;
+//		_cow_spinlock = 0;
+		pthread_spin_init(&_cow_spinlock, PTHREAD_PROCESS_PRIVATE);
 
 		size_t entries_per_page = 1 << LL_ENTRIES_PER_PAGE_BITS;
 		_pages = (size + 4) / entries_per_page;
@@ -971,6 +973,8 @@ public:
 
 		if (free_indirection) { free(_indirection); _indirection = NULL; }
 		if (free_page_ids   ) { free(_page_ids   ); _page_ids    = NULL; }
+
+		pthread_spin_destroy(&_cow_spinlock);
 	}
 
 
@@ -1117,8 +1121,10 @@ public:
 		assert(node >= 0);
 		assert(node <= (node_t) _size);		/* allow one extra value past the end */
 		
+		ll_spinlock_acquire(&_cow_spinlock);
+
 		if (_modified_pages == 0) {
-			ll_spinlock_acquire(&_cow_spinlock);
+//			ll_spinlock_acquire(&_cow_spinlock);
 			if (_modified_pages == 0) {
 				auto vt = _levels->prev_level(_level);
 				if (_indirection == vt->_indirection) {
@@ -1128,7 +1134,7 @@ public:
 					memcpy(_page_ids, vt->_page_ids, sizeof(size_t) * (_pages + 1));
 				}
 			}
-			ll_spinlock_release(&_cow_spinlock);
+//			ll_spinlock_release(&_cow_spinlock);
 		}
 
 		size_t wp = node >> LL_ENTRIES_PER_PAGE_BITS;
@@ -1137,33 +1143,37 @@ public:
 		T* page = _indirection[wp];
 		size_t page_id = _page_ids[wp];
 
-		if (_levels->page_manager()->refcount(page_id) == 1) {
-			page[wi] = value;
-		}
-		else {
+//		if (_levels->page_manager()->refcount(page_id) == 1) {
+//			page[wi] = value;
+//		}
+//		else {
 
-			ll_spinlock_acquire(&_cow_spinlock);
+//			ll_spinlock_acquire(&_cow_spinlock);
 
-			page = _indirection[wp];
-			page_id = _page_ids[wp];
+//			page = _indirection[wp];
+//			page_id = _page_ids[wp];
 
-			if (_levels->page_manager()->refcount(page_id) == 1) {
-				page[wi] = value;
-				ll_spinlock_release(&_cow_spinlock);
-				return;
-			}
+                    if (_levels->page_manager()->refcount(page_id) == 1) {
+                            page[wi] = value;
+                            ll_spinlock_release(&_cow_spinlock);
+                            return;
+                    }
 
 
-			// Copy on write
+                    // Copy on write
 
-			_page_ids[wp] = _levels->page_manager()
-				->cow(&_indirection[wp], page_id, page);
-			_modified_pages++;
+                    _page_ids[wp] = _levels->page_manager()
+                            ->cow(&_indirection[wp], page_id, page);
+                    _modified_pages++;
 
-			_indirection[wp][wi] = value;
+                    _indirection[wp][wi] = value;
 
-			ll_spinlock_release(&_cow_spinlock);
-		}
+                    std::cout << "   logical page: " << wp << ", physical page: " << _page_ids[wp] << ", address: " << _indirection[wp] << std::endl;
+
+//			ll_spinlock_release(&_cow_spinlock);
+//		}
+
+		ll_spinlock_release(&_cow_spinlock);
 	}
 
 

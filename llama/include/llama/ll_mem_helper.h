@@ -80,7 +80,8 @@ public:
 
 		_chunk_index = 0;
 		_last_used = 0;
-		_lock = 0;
+//		_lock = 0;
+		pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 	}
 
 
@@ -92,6 +93,7 @@ public:
 		for (int i = ((int) _buffers.size()) - 1; i >= 0; i--) {
 			::free(_buffers[i]);
 		}
+		pthread_spin_destroy(&_lock);
 	}
 
 
@@ -136,10 +138,20 @@ public:
 	 * @param offset the given offset
 	 * @return the pointer
 	 */
-	void* pointer(size_t chunk, size_t offset) {
-		assert(chunk <= _chunk_index && offset < _chunk_size);
-		return ((char*) _buffers[chunk]) + offset;
-	}
+#if __has_feature(thread_sanitizer)
+        void* pointer(size_t chunk, size_t offset) {
+                ll_spinlock_acquire(&_lock);
+                assert(chunk <= _chunk_index && offset < _chunk_size);
+                void* pointer = ((char*) _buffers[chunk]) + offset;
+                ll_spinlock_release(&_lock);
+                return pointer;
+        }
+#else
+        void* pointer(size_t chunk, size_t offset) {
+                assert(chunk <= _chunk_index && offset < _chunk_size);
+                return ((char*) _buffers[chunk]) + offset;
+        }
+#endif
 
 
 	/**
@@ -225,7 +237,8 @@ public:
 	 * Create an instance of type ll_memory_pool_for_large_allocations
 	 */
 	ll_memory_pool_for_large_allocations() {
-		_lock = 0;
+//		_lock = 0;
+	        pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 		_overprovision = 0.2;
 	}
 
@@ -237,6 +250,7 @@ public:
 		for (size_t i = 0; i < _buffers.size(); i++) {
 			if (_buffers[i].b_buffer != NULL) ::free(_buffers[i].b_buffer);
 		}
+		pthread_spin_destroy(&_lock);
 	}
 
 
@@ -370,7 +384,8 @@ public:
 	 * Initialize
 	 */
 	ll_memory_helper() {
-		_lock = 0;
+//		_lock = 0;
+	    pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 	}
 
 
@@ -381,6 +396,7 @@ public:
 		for (int i = ((int) _buffers.size()) - 1; i >= 0; i--) {
 			free(_buffers[i]);
 		}
+		pthread_spin_destroy(&_lock);
 	}
 
 

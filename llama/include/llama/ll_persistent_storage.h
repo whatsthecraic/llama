@@ -413,12 +413,16 @@ public:
 		_name = name;
 		_namespace = ns;
 
-		_fds_lock = 0;
-		_lengths_lock = 0;
-		_mmaped_regions_lock = 0;
+//		_fds_lock = 0;
+		pthread_spin_init(&_fds_lock, PTHREAD_PROCESS_PRIVATE);
+//		_lengths_lock = 0;
+		pthread_spin_init(&_lengths_lock, PTHREAD_PROCESS_PRIVATE);
+//		_mmaped_regions_lock = 0;
+		pthread_spin_init(&_mmaped_regions_lock, PTHREAD_PROCESS_PRIVATE);
 
 		_header_fd = 0;
-		_header_lock = 0;
+//		_header_lock = 0;
+		pthread_spin_init(&_header_lock, PTHREAD_PROCESS_PRIVATE);
 
 		_auto_sync = true;
 
@@ -545,6 +549,11 @@ public:
 		}
 
 		if (_header_fd > 0) close(_header_fd);
+
+		pthread_spin_destroy(&_header_lock);
+		pthread_spin_destroy(&_fds_lock);
+		pthread_spin_destroy(&_lengths_lock);
+		pthread_spin_destroy(&_mmaped_regions_lock);
 	}
 
 
@@ -2077,7 +2086,8 @@ private:
 		_edge_table_ptr = NULL;
 		_chunks = NULL;
 
-		_cow_spinlock = 0;
+//		_cow_spinlock = 0;
+		pthread_spin_init(&_cow_spinlock, PTHREAD_PROCESS_PRIVATE);
 		_modified_chunks = 0;
 		_highest_cowed_page = -1;
 		_duplicate_of_prev_level = false;
@@ -2120,6 +2130,8 @@ public:
 
 		if (_level_meta != NULL) free(_level_meta);
 		free(_zero_page);
+
+		pthread_spin_destroy(&_cow_spinlock);
 	}
 
 

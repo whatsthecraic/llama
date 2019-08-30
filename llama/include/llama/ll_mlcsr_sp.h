@@ -37,8 +37,6 @@
 #ifndef LL_MLCSR_SP_H_
 #define LL_MLCSR_SP_H_
 
-#include <iostream>
-
 #include "llama/ll_mem_array.h"
 #include "llama/ll_edge_table.h"
 
@@ -49,6 +47,7 @@
 #include "llama/ll_mlcsr_iterator.h"
 #include "llama/ll_mlcsr_properties.h"
 
+#include <iostream>
 
 
 //==========================================================================//
@@ -675,6 +674,8 @@ public:
 		size_t et_capacity = values_length(level, max_nodes + 4,
 				max_adj_lists + 4, max_edges);
 		auto et = NEW_LL_ET<T>(et_capacity, max_nodes);
+
+		std::cout << "[init_level] level: " << level << ", et_capacity: " << et_capacity << ", max_nodes: " << max_nodes << ", max_edges: " << max_edges << ", max_adj_lists: " << max_adj_lists << std::endl;;
 #ifndef LL_PERSISTENCE
 		if (et == NULL) {
 			LL_E_PRINT("** out of memory ** cannot allocate the edge table\n");
@@ -1290,6 +1291,7 @@ protected:
 	 * @param iter the iterator
 	 * @return true if it has already been deleted
 	 */
+	__attribute__((no_sanitize("thread")))
 	inline bool is_edge_deleted(ll_edge_iterator& iter) const {
 #ifndef LL_DELETIONS
 		return false;
@@ -1376,8 +1378,6 @@ public:
 	 * @return the corresponding edge table index
 	 */
 	size_t init_node(node_t node, size_t new_edges, size_t deleted_edges) {
-//	        std::cout << "init_node: " << node << ", new_edges: " << new_edges << ", deleted_edges: " << deleted_edges << "\n";
-
 		// XXX level comparisons do not work with LL_MLCSR_LEVEL_ID_WRAP
 
 		int level = this->_begin.size() - 1;
@@ -1551,8 +1551,6 @@ public:
 
 		size_t start_et_write_index = this->_et_write_index;
 		this->_et_write_index += delta_edges;
-
-//                std::cout << "   adj_list_start: " << e.adj_list_start << ", degree: " << e.degree << ", level: " << e.level_length << "\n";
 
 		return start_et_write_index;
 	}

@@ -38,11 +38,13 @@
 #define _LL_LOCK_H
 
 #include <stdint.h>
+#include <pthread.h>
+
 
 /**
  * Spinlock
  */
-typedef volatile int32_t ll_spinlock_t;
+typedef pthread_spinlock_t ll_spinlock_t;
 
 
 /**
@@ -52,7 +54,8 @@ typedef volatile int32_t ll_spinlock_t;
  * @return true if acquired
  */
 inline bool ll_spinlock_try_acquire(ll_spinlock_t* ptr) {
-    int ret = __sync_lock_test_and_set(ptr, 1);
+//    int ret = __sync_lock_test_and_set(ptr, 1);
+    int ret = pthread_spin_trylock(ptr);
     return ret == 0; // 0 means success
 }
 
@@ -63,11 +66,12 @@ inline bool ll_spinlock_try_acquire(ll_spinlock_t* ptr) {
  * @param ptr the spinlock
  */
 inline void ll_spinlock_acquire(ll_spinlock_t* ptr) {
-    while (__sync_lock_test_and_set(ptr, 1)) {
-        while (*ptr == 1) {
-			asm volatile ("pause" ::: "memory");
-        }
-    }
+//    while (__sync_lock_test_and_set(ptr, 1)) {
+//        while (*ptr == 1) {
+//			asm volatile ("pause" ::: "memory");
+//        }
+//    }
+    pthread_spin_lock(ptr);
 }
 
 
@@ -77,8 +81,9 @@ inline void ll_spinlock_acquire(ll_spinlock_t* ptr) {
  * @param ptr the spinlock
  */
 inline void ll_spinlock_release(ll_spinlock_t* ptr) {
-	__sync_synchronize();
-    *ptr = 0;
+//	__sync_synchronize();
+//    *ptr = 0;
+    pthread_spin_unlock(ptr);
 }
 
 
@@ -100,8 +105,18 @@ public:
 	 * Initialize
 	 */
 	ll_spinlock_table_ext() {
-		for (int i = 0; i < size * LL_CACHELINE; i++)
-			ll_spinlock_tab[i] = 0;
+	    for (int i = 0; i < size * LL_CACHELINE; i++){
+	        pthread_spin_init(ll_spinlock_tab +i, PTHREAD_PROCESS_PRIVATE);
+//	        ll_spinlock_tab[i] = 0;
+	    }
+
+	}
+
+	~ll_spinlock_table_ext(){
+	    for (int i = 0; i < size * LL_CACHELINE; i++){
+	        pthread_spin_destroy(ll_spinlock_tab +i);
+	    }
+
 	}
 
 
