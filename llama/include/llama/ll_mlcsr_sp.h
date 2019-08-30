@@ -37,6 +37,8 @@
 #ifndef LL_MLCSR_SP_H_
 #define LL_MLCSR_SP_H_
 
+#include <iostream>
+
 #include "llama/ll_mem_array.h"
 #include "llama/ll_edge_table.h"
 
@@ -1374,6 +1376,7 @@ public:
 	 * @return the corresponding edge table index
 	 */
 	size_t init_node(node_t node, size_t new_edges, size_t deleted_edges) {
+//	        std::cout << "init_node: " << node << ", new_edges: " << new_edges << ", deleted_edges: " << deleted_edges << "\n";
 
 		// XXX level comparisons do not work with LL_MLCSR_LEVEL_ID_WRAP
 
@@ -1438,8 +1441,7 @@ public:
 		//   * If the degree drops to 0, set the node struct to the NULL node
 
 #ifdef LL_PRECOMPUTED_DEGREE
-		e.degree = new_edges - deleted_edges;
-
+		e.degree = 0;
 		if (level > 0 && node < (node_t) this->vertex_table(level-1)->size()) {
 			const ll_mlcsr_core__begin_t& bprev
 				= (*this->vertex_table(level-1))[node];
@@ -1450,9 +1452,12 @@ public:
 					bprev.level_length, (signed) bprev.degree);
 
 			if (bprev.adj_list_start != LL_NIL_EDGE) {
-				e.degree = e.degree + bprev.degree;
+				e.degree = bprev.degree;
 			}
 		}
+
+		assert((static_cast<int64_t>(e.degree) + new_edges - deleted_edges >= 0) && "Underflow");
+		e.degree = static_cast<int64_t>(e.degree) + new_edges - deleted_edges;
 
 		assert((signed) e.degree >= 0);
 		if (e.degree == 0) {
@@ -1546,6 +1551,8 @@ public:
 
 		size_t start_et_write_index = this->_et_write_index;
 		this->_et_write_index += delta_edges;
+
+//                std::cout << "   adj_list_start: " << e.adj_list_start << ", degree: " << e.degree << ", level: " << e.level_length << "\n";
 
 		return start_et_write_index;
 	}
