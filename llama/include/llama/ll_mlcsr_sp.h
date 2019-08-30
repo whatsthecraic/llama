@@ -47,9 +47,6 @@
 #include "llama/ll_mlcsr_iterator.h"
 #include "llama/ll_mlcsr_properties.h"
 
-#include <iostream>
-
-
 //==========================================================================//
 // Counters                                                                 //
 //==========================================================================//
@@ -675,7 +672,7 @@ public:
 				max_adj_lists + 4, max_edges);
 		auto et = NEW_LL_ET<T>(et_capacity, max_nodes);
 
-		std::cout << "[init_level] level: " << level << ", et_capacity: " << et_capacity << ", max_nodes: " << max_nodes << ", max_edges: " << max_edges << ", max_adj_lists: " << max_adj_lists << std::endl;;
+//		std::cout << "[init_level] level: " << level << ", et_capacity: " << et_capacity << ", max_nodes: " << max_nodes << ", max_edges: " << max_edges << ", max_adj_lists: " << max_adj_lists << std::endl;;
 #ifndef LL_PERSISTENCE
 		if (et == NULL) {
 			LL_E_PRINT("** out of memory ** cannot allocate the edge table\n");
@@ -1479,7 +1476,7 @@ public:
 
 #ifdef LL_MLCSR_CONTINUATIONS
 		if (IFE_LL_MLCSR_LEVEL_ID_WRAP(this->_begin.has_prev_level(level), level > 0)
-				&& e.adj_list_start != LL_NIL_EDGE) {
+				&& e.adj_list_start != LL_NIL_EDGE && LL_EDGE_LEVEL(e.adj_list_start) == level) {
 			size_t t = this->_et_write_index + delta_edges;
 			T* ptr = this->_latest_values->edge_ptr(node, t);
 			LL_XD_PRINT("%4ld) e=%lu wp=%lu, no copy\n", node,
@@ -1548,6 +1545,10 @@ public:
 		else {
 			vt->dense_direct_write(node, e);
 		}
+
+		assert((level == 0) ||
+		        (new_edges == 0 && delta_edges == 0) ||
+		        (new_edges > 0 && delta_edges == new_edges + sizeof(ll_mlcsr_core__begin_t) / sizeof(T)));
 
 		size_t start_et_write_index = this->_et_write_index;
 		this->_et_write_index += delta_edges;

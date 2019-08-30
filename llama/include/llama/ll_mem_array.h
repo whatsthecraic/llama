@@ -40,7 +40,6 @@
 #include "llama/ll_common.h"
 
 #include <atomic>
-#include <iostream>
 
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -1168,7 +1167,7 @@ public:
 
                     _indirection[wp][wi] = value;
 
-                    std::cout << "   logical page: " << wp << ", physical page: " << _page_ids[wp] << ", address: " << _indirection[wp] << std::endl;
+//                    std::cout << "   logical page: " << wp << ", physical page: " << _page_ids[wp] << ", address: " << _indirection[wp] << std::endl;
 
 //			ll_spinlock_release(&_cow_spinlock);
 //		}

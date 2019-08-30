@@ -979,7 +979,7 @@ public:
 			// Add max_nodes just in case sometimes in the future
 			int* loc = (int*) malloc(sizeof(int) * _out.edge_table_length(level));
 
-//#			pragma omp parallel for schedule(dynamic,4096)
+#			pragma omp parallel for schedule(dynamic,4096)
 			for (node_t source = 0; source < _out.max_nodes(); source++) {
 				ll_edge_iterator iter;
 				_out.iter_begin_within_level(iter, source, level);
@@ -1034,7 +1034,7 @@ public:
 #endif
 			memset(a, 0, sizeof(degree_t) * _out.max_nodes());
 
-//#			pragma omp parallel for schedule(dynamic,4096)
+#			pragma omp parallel for schedule(dynamic,4096)
 			for (node_t source = 0; source < _out.max_nodes(); source++) {
 				ll_edge_iterator iter;
 				_out.iter_begin_within_level(iter, source, level);
@@ -1556,9 +1556,9 @@ public:
 			= (degree_t*) malloc(sizeof(degree_t) * num_total_nodes);
 		memset(deleted_frozen_in_edges, 0, sizeof(degree_t)*num_total_nodes);
 
-//#		pragma omp parallel
+#		pragma omp parallel
 		{
-//#			pragma omp for schedule(static,4096)
+#			pragma omp for schedule(static,4096)
 			for (size_t p = 0; p < vt->num_pages(); p++) {
 				if (!vt->page_with_contents(p)) continue;
 				node_t n = p * vt->num_entries_per_page();
@@ -1607,7 +1607,7 @@ public:
 		(void) max_edge_property_id;
 
 #ifndef LL_PERSISTENCE
-//#		pragma omp parallel
+#		pragma omp parallel
 #endif
 		{
 #	ifdef LL_SORT_EDGES
@@ -1615,7 +1615,7 @@ public:
 #	endif
 
 #ifndef LL_PERSISTENCE
-//#			pragma omp for schedule(dynamic,4096)
+#			pragma omp for schedule(dynamic,4096)
 #endif
 			for (size_t p = 0; p < vt->num_pages(); p++) {
 				if (!vt->page_with_contents(p)) continue;
@@ -1683,9 +1683,9 @@ public:
 
 			memset(new_degrees, 0, sizeof(degree_t) * num_total_nodes);
 
-//#			pragma omp parallel
+#			pragma omp parallel
 			{
-//#				pragma omp for schedule(dynamic,4096)
+#				pragma omp for schedule(dynamic,4096)
 				for (size_t p = 0; p < vt->num_pages(); p++) {
 					if (!vt->page_with_contents(p)) continue;
 					node_t n = p * vt->num_entries_per_page();
@@ -1715,10 +1715,10 @@ public:
 			}
 
 
-//#			pragma omp parallel
+#			pragma omp parallel
 			{
 #	ifndef LL_PERSISTENCE
-//#				pragma omp for schedule(dynamic,4096)
+#				pragma omp for schedule(dynamic,4096)
 #	endif
 				for (size_t p = 0; p < vt->num_pages(); p++) {
 					if (!vt->page_with_contents(p)) continue;
@@ -1732,7 +1732,7 @@ public:
 					}
 				}
 
-//#				pragma omp for schedule(dynamic,4096)
+#				pragma omp for schedule(dynamic,4096)
 				for (size_t p = 0; p < vt->num_pages(); p++) {
 					if (!vt->page_with_contents(p)) continue;
 					node_t n = p * vt->num_entries_per_page();
