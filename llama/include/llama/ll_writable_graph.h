@@ -123,14 +123,10 @@ public:
 		_delNewEdges.store(0);
 		_delFrozenEdges.store(0);
 
-//		_new_node_lock = 0;
-		pthread_spin_init(&_new_node_lock, PTHREAD_PROCESS_PRIVATE);
-//		_deletions_out_lock = 0;
-		pthread_spin_init(&_deletions_out_lock, PTHREAD_PROCESS_PRIVATE);
-//		_deletions_in_lock = 0;
-		pthread_spin_init(&_deletions_in_lock, PTHREAD_PROCESS_PRIVATE);
-//		_property_lock = 0;
-		pthread_spin_init(&_property_lock, PTHREAD_PROCESS_PRIVATE);
+		ll_spinlock_init(&_new_node_lock);
+		ll_spinlock_init(&_deletions_out_lock);
+		ll_spinlock_init(&_deletions_in_lock);
+		ll_spinlock_init(&_property_lock);
 
 		_ro_graph.set_deletion_checkers(&_deletions_adapter_out,
 				&_deletions_adapter_in);
@@ -157,10 +153,10 @@ public:
 		delete_free_w_nodes();
 		delete_free_w_edges();
 #endif
-                pthread_spin_destroy(&_new_node_lock);
-                pthread_spin_destroy(&_deletions_out_lock);
-                pthread_spin_destroy(&_deletions_in_lock);
-                pthread_spin_destroy(&_property_lock);
+                ll_spinlock_destroy(&_new_node_lock);
+                ll_spinlock_destroy(&_deletions_out_lock);
+                ll_spinlock_destroy(&_deletions_in_lock);
+                ll_spinlock_destroy(&_property_lock);
 	}
 	
 

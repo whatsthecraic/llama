@@ -66,7 +66,7 @@
 
 #if defined(_OPENMP)
 #include <omp.h>
-#else
+#else /* disable OpenMP for debugging purposes */
 #define omp_get_max_threads() 1
 #define omp_get_thread_num() 0
 #define omp_set_num_threads(value)

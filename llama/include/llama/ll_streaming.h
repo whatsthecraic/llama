@@ -89,8 +89,7 @@ public:
 	 * Create an instance of the concatenated data source
 	 */
 	ll_concat_data_source() {
-
-		_lock = 0;
+                ll_spinlock_init(&_lock);
 	}
 
 
@@ -103,6 +102,7 @@ public:
 			delete _data_sources.front();
 			_data_sources.pop();
 		}
+		ll_spinlock_destroy(&_lock);
 	}
 
 

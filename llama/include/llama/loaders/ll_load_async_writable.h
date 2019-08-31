@@ -122,8 +122,7 @@ public:
 	 */
 	ll_la_request_queue() {
 
-//		_lock = 0;
-	        pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
+	        ll_spinlock_init(&_lock);
 		_head = NULL;
 		_tail = NULL;
 		_length = 0;
@@ -141,7 +140,7 @@ public:
 			delete _head;
 			_head = n;
 		}
-		pthread_spin_destroy(&_lock);
+		ll_spinlock_destroy(&_lock);
 	}
 
 

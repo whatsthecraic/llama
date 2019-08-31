@@ -934,8 +934,7 @@ public:
 		_indirection = NULL;
 		_modified_pages = 0;
 
-//		_cow_spinlock = 0;
-		pthread_spin_init(&_cow_spinlock, PTHREAD_PROCESS_PRIVATE);
+		ll_spinlock_init(&_cow_spinlock);
 
 		size_t entries_per_page = 1 << LL_ENTRIES_PER_PAGE_BITS;
 		_pages = (size + 4) / entries_per_page;
@@ -973,7 +972,7 @@ public:
 		if (free_indirection) { free(_indirection); _indirection = NULL; }
 		if (free_page_ids   ) { free(_page_ids   ); _page_ids    = NULL; }
 
-		pthread_spin_destroy(&_cow_spinlock);
+		ll_spinlock_destroy(&_cow_spinlock);
 	}
 
 

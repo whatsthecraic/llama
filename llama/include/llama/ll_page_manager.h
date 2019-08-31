@@ -113,8 +113,7 @@ public:
 		_zero_pages = zero_pages;
 
 		_num_pages = 0;
-//		_lock = 0;
-		pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
+		ll_spinlock_init(&_lock);
 		_zero_page = -1;
 
 		_free_list_next = (ssize_t*) malloc(sizeof(ssize_t)
@@ -135,7 +134,7 @@ public:
 	 */
 	virtual ~ll_page_manager() {
 		free(_free_list_next);
-		pthread_spin_destroy(&_lock);
+		ll_spinlock_destroy(&_lock);
 	}
 
 

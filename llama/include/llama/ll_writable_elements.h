@@ -172,8 +172,7 @@ public:
 	 */
 	w_edge() {
 
-//		we_properties_spinlock = 0;
-		pthread_spin_init(&we_properties_spinlock, PTHREAD_PROCESS_PRIVATE);
+		ll_spinlock_init(&we_properties_spinlock);
 
 		memset(we_properties_32, 0, sizeof(we_properties_32));
 		memset(we_properties_64, 0, sizeof(we_properties_64));
@@ -189,7 +188,7 @@ public:
 	 */
 	~w_edge() {
 		clear();
-		pthread_spin_destroy(&we_properties_spinlock);
+		ll_spinlock_destroy(&we_properties_spinlock);
 	}
 
 
@@ -595,8 +594,7 @@ public:
 	 */
 	w_node(void) {
 
-//		wn_lock = 0;
-	        pthread_spin_init(&wn_lock, PTHREAD_PROCESS_PRIVATE);
+	        ll_spinlock_init(&wn_lock);
 		wn_out_edges_delta = 0;
 		wn_in_edges_delta = 0;
 		wn_next = NULL;

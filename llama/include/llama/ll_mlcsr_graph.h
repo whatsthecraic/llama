@@ -184,10 +184,8 @@ public:
 	{
 
 		_database = database;
-//		_csrs_update_lock = 0;
-		pthread_spin_init(&_csrs_update_lock, PTHREAD_PROCESS_PRIVATE);
-//		_update_lock = 0;
-		pthread_spin_init(&_update_lock, PTHREAD_PROCESS_PRIVATE);
+		ll_spinlock_init(&_csrs_update_lock);
+		ll_spinlock_init(&_update_lock);
 		_master = NULL;
 
 		_next_node_property_id = 0;
@@ -434,8 +432,8 @@ public:
 			delete _pool_for_sparse_node_data;
 		}
 
-		pthread_spin_destroy(&_csrs_update_lock);
-		pthread_spin_destroy(&_update_lock);
+		ll_spinlock_destroy(&_csrs_update_lock);
+		ll_spinlock_destroy(&_update_lock);
 	}
 
 

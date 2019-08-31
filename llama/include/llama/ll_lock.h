@@ -38,14 +38,49 @@
 #define _LL_LOCK_H
 
 #include <stdint.h>
+
+// When using the thread sanitizer, replace their own native lock with the pthread's spin lock
+#if __has_feature(thread_sanitizer)
 #include <pthread.h>
 
+typedef pthread_spinlock_t ll_spinlock_t;
+
+inline void ll_spinlock_init(ll_spinlock_t* ptr){
+    pthread_spin_init(ptr, PTHREAD_PROCESS_PRIVATE);
+}
+
+inline void ll_spinlock_destroy(ll_spinlock_t* ptr){
+    pthread_spin_destroy(ptr);
+}
+
+inline bool ll_spinlock_try_acquire(ll_spinlock_t* ptr) {
+    int ret = pthread_spin_trylock(ptr);
+    return ret == 0; // 0 means success
+}
+
+inline void ll_spinlock_acquire(ll_spinlock_t* ptr) {
+    pthread_spin_lock(ptr);
+}
+
+inline void ll_spinlock_release(ll_spinlock_t* ptr) {
+    pthread_spin_unlock(ptr);
+}
+#else
 
 /**
  * Spinlock
  */
-typedef pthread_spinlock_t ll_spinlock_t;
+typedef volatile int32_t ll_spinlock_t;
 
+// Init the lock before any usage
+inline void ll_spinlock_init(ll_spinlock_t* ptr_lock){
+    *ptr_lock = 0;
+}
+
+// Destroy the lock
+inline void ll_spinlock_destroy(ll_spinlock_t* ptr_lock){
+    /* nop */
+}
 
 /**
  * Try to acquire a spinlock
@@ -54,8 +89,7 @@ typedef pthread_spinlock_t ll_spinlock_t;
  * @return true if acquired
  */
 inline bool ll_spinlock_try_acquire(ll_spinlock_t* ptr) {
-//    int ret = __sync_lock_test_and_set(ptr, 1);
-    int ret = pthread_spin_trylock(ptr);
+    int ret = __sync_lock_test_and_set(ptr, 1);
     return ret == 0; // 0 means success
 }
 
@@ -66,14 +100,12 @@ inline bool ll_spinlock_try_acquire(ll_spinlock_t* ptr) {
  * @param ptr the spinlock
  */
 inline void ll_spinlock_acquire(ll_spinlock_t* ptr) {
-//    while (__sync_lock_test_and_set(ptr, 1)) {
-//        while (*ptr == 1) {
-//			asm volatile ("pause" ::: "memory");
-//        }
-//    }
-    pthread_spin_lock(ptr);
+    while (__sync_lock_test_and_set(ptr, 1)) {
+        while (*ptr == 1) {
+            asm volatile ("pause" ::: "memory");
+        }
+    }
 }
-
 
 /**
  * Release a spinlock
@@ -81,11 +113,11 @@ inline void ll_spinlock_acquire(ll_spinlock_t* ptr) {
  * @param ptr the spinlock
  */
 inline void ll_spinlock_release(ll_spinlock_t* ptr) {
-//	__sync_synchronize();
-//    *ptr = 0;
-    pthread_spin_unlock(ptr);
+    __sync_synchronize();
+    *ptr = 0;
 }
 
+#endif
 
 #define LL_CACHELINE            8
 
@@ -93,59 +125,51 @@ inline void ll_spinlock_release(ll_spinlock_t* ptr) {
 /**
  * Spinlock table
  */
-template <int size>					// Must be a power of 2
+template <int size>  // Must be a power of 2
 class ll_spinlock_table_ext {
-
-	ll_spinlock_t ll_spinlock_tab[size * LL_CACHELINE];
-
+    ll_spinlock_t ll_spinlock_tab[size * LL_CACHELINE];
 
 public:
-	
-	/**
-	 * Initialize
-	 */
-	ll_spinlock_table_ext() {
-	    for (int i = 0; i < size * LL_CACHELINE; i++){
-	        pthread_spin_init(ll_spinlock_tab +i, PTHREAD_PROCESS_PRIVATE);
-//	        ll_spinlock_tab[i] = 0;
-	    }
-
-	}
-
-	~ll_spinlock_table_ext(){
-	    for (int i = 0; i < size * LL_CACHELINE; i++){
-	        pthread_spin_destroy(ll_spinlock_tab +i);
-	    }
-
-	}
+    /**
+     * Initialize
+     */
+    ll_spinlock_table_ext() {
+        for (int i = 0; i < size * LL_CACHELINE; i++){
+            ll_spinlock_init(ll_spinlock_tab + i);
+        }
+    }
 
 
-	/**
-	 * Acquire
-	 *
-	 * @param x the value
-	 */
-	template <typename T>
-	void acquire_for(T x) {
-		uint32_t entry_idx = (uint32_t)(x & (size - 1));
-		uint32_t tab_idx = entry_idx * LL_CACHELINE;
-		ll_spinlock_acquire(&ll_spinlock_tab[tab_idx]);
-	}
+    ~ll_spinlock_table_ext(){
+        for (int i = 0; i < size * LL_CACHELINE; i++){
+            ll_spinlock_destroy(ll_spinlock_tab +i);
+        }
+    }
 
+    /**
+     * Acquire
+     *
+     * @param x the value
+     */
+    template <typename T>
+    void acquire_for(T x) {
+        uint32_t entry_idx = (uint32_t)(x & (size - 1));
+        uint32_t tab_idx = entry_idx * LL_CACHELINE;
+        ll_spinlock_acquire(&ll_spinlock_tab[tab_idx]);
+    }
 
-	/**
-	 * Release
-	 *
-	 * @param x the value
-	 */
-	template <typename T>
-	void release_for(T x) {
-		uint32_t entry_idx = (uint32_t)(x & (size - 1));
-		uint32_t tab_idx = entry_idx * LL_CACHELINE;
-		ll_spinlock_release(&ll_spinlock_tab[tab_idx]);
-	}
+    /**
+     * Release
+     *
+     * @param x the value
+     */
+    template <typename T>
+    void release_for(T x) {
+        uint32_t entry_idx = (uint32_t)(x & (size - 1));
+        uint32_t tab_idx = entry_idx * LL_CACHELINE;
+        ll_spinlock_release(&ll_spinlock_tab[tab_idx]);
+    }
 };
-
 
 /**
  * The default spinlock table
