@@ -39,8 +39,11 @@
 
 #include <stdint.h>
 
+#include "ll_common.h"
+
+
 // When using the thread sanitizer, replace their own native lock with the pthread's spin lock
-#if __has_feature(thread_sanitizer)
+#if defined(THREAD_SANITIZER_ENABLED)
 #include <pthread.h>
 
 typedef pthread_spinlock_t ll_spinlock_t;

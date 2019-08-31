@@ -72,7 +72,15 @@
 #define omp_set_num_threads(value)
 #endif
 
-
+// Is the thread sanitizer enabled?
+#if defined(__has_feature) /* clang */
+#if __has_feature(thread_sanitizer)
+#define THREAD_SANITIZER_ENABLED
+#endif
+#endif
+#if !defined(THREAD_SANITIZER_ENABLED) && defined(__SANITIZE_THREAD__) /* gcc */
+#define THREAD_SANITIZER_ENABLED
+#endif
 
 //==========================================================================//
 // Basic Sanity Checks                                                      //

@@ -298,6 +298,7 @@ public:
 	 * @param id the page ID
 	 * @return the new reference count
 	 */
+	__attribute__((no_sanitize("thread")))
 	size_t release_page(size_t id) {
 
 		size_t index_outer = id >> LL_PM_ALLOCATION_STEP_BITS;

@@ -137,7 +137,7 @@ public:
 	 * @param offset the given offset
 	 * @return the pointer
 	 */
-#if __has_feature(thread_sanitizer)
+#ifdef THREAD_SANITIZER_ENABLED
         void* pointer(size_t chunk, size_t offset) {
                 ll_spinlock_acquire(&_lock);
                 assert(chunk <= _chunk_index && offset < _chunk_size);
