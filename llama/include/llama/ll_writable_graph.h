@@ -679,38 +679,65 @@ public:
 	 * @param out the output for the edge ID
 	 * @return true if the edge was added; false if it it already exists
 	 */
-	bool add_edge_if_not_exists(node_t source, node_t target, edge_t* out) {
+	int add_edge_if_not_exists(node_t source, node_t target, edge_t* out) {
+	    edge_t e;
+	    w_node* p_source;
+	    w_node* p_target;
 
-		edge_t e;
-		
-		if (_ro_graph.node_exists(source) && _ro_graph.node_exists(target)) {
-			e = _ro_graph.find(source, target);
-			if (e != LL_NIL_EDGE) {
-				*out = e;
-				return false;
-			}
-		}
+	    lock_nodes(source, target, p_source, p_target);
 
-		w_node* p_source;
-		w_node* p_target;
+//	    LLAMA_DEBUG("source: " << source << ", target: " << target << ", p_source: " << p_source << ", p_target: " << p_target << ", p_source->wn_out_edges.size(): " << p_source->wn_out_edges.size());
 
-		lock_nodes(source, target, p_source, p_target);
+	    // first check the write store, whether there is an outgoing edge for the source
+	    for(uint64_t i = 0, sz = p_source->wn_out_edges.size(); i < sz; i++){
+	        w_edge* w = p_source->wn_out_edges[i];
+	        if(w->we_target != target) continue; // different edge
 
-		ll_edge_iterator iter;
-		this->out_iter_begin_within_level(iter, source, p_source);
-		FOREACH_OUTEDGE_ITER_WITHIN_LEVEL(e, *this, iter) {
-			if (iter.last_node == target) {
-				*out = e;
-				release_nodes(p_source, p_target);
-				return false;
-			}
-		}
+                // bug fix: if this edge was previously deleted and it's still in the write store, restore it
+                bool inserted = false;
+                if(!w->exists()){
+                    p_source->wn_out_edges_delta++;
+                    p_target->wn_in_edges_delta++;
+                    w->we_deleted = false;
+                    assert(_delNewEdges > 0);
+                    _delNewEdges--;
+                    inserted = true;
+                }
 
-		e = add_edge(source, target, p_source, p_target);
-		release_nodes(p_source, p_target);
+                *out = w->we_public_id;
+                release_nodes(p_source, p_target);
+                return inserted;
+	    }
 
-		*out = e;
-		return true;
+	    // the edge is not in the write store, check whether it's in the read store
+	    if (_ro_graph.node_exists(source) && _ro_graph.node_exists(target)) {
+	        e = _ro_graph.find(source, target);
+	        if (e != LL_NIL_EDGE) {
+
+	            bool inserted = false;
+	            // bug fix, again revert a deletion still in the write store
+	            node_t handle = (* (_ro_graph.out().edge_table(LL_EDGE_LEVEL(e))) )[LL_EDGE_INDEX(e)];
+	            if(LL_VALUE_MAX_LEVEL(handle) == _ro_graph.max_level() +1){ // that is, the level (snapshot) id is the one from the write store
+	                _ro_graph.update_max_visible_level(e, LL_MAX_LEVEL +2);
+	                __sync_fetch_and_sub(&writable_node(source)->wn_num_deleted_out_edges, 1); // gcc intrinsics
+	                __sync_fetch_and_sub(&writable_node(target)->wn_num_deleted_in_edges , 1);
+	                assert(_delFrozenEdges > 0);
+                        _delFrozenEdges--; // already atomic
+	                inserted = true;
+	            }
+
+	            *out = e;
+	            release_nodes(p_source, p_target);
+	            return inserted;
+	        }
+	    }
+
+	    // the edge is not present in the write store nor in the read store, create it
+	    e = add_edge(source, target, p_source, p_target);
+	    release_nodes(p_source, p_target);
+
+	    *out = e;
+	    return true;
 	}
 
 
@@ -719,6 +746,8 @@ public:
 	    w_node* p_target;
 	    edge_t edge_id = LL_NIL_EDGE;
 	    lock_nodes(source, target, p_source, p_target);
+
+//            LLAMA_DEBUG("source: " << source << ", target: " << target << ", p_source: " << p_source << ", p_target: " << p_target << ", p_source->wn_out_edges.size(): " << p_source->wn_out_edges.size());
 
 	    // search the edge id in the write store
 	    ll_edge_iterator iter;
