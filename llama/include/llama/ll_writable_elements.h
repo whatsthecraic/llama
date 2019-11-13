@@ -341,7 +341,8 @@ struct w_edge_noop {
 
 #ifdef LL_WRITABLE_USE_MEMORY_POOL
 
-static ll_memory_pool __w_pool;
+//static ll_memory_pool __w_pool; // this cannot work
+extern ll_memory_pool __w_pool;
 
 
 /**
@@ -384,7 +385,7 @@ struct w_edge_allocator {
 	 * @param o_offset the pointer to store the offset within the chunk
 	 * @return the writable edge
 	 */
-	w_edge* operator() (size_t* o_chunk, size_t* o_offset) {
+	w_edge* operator() (size_t* o_chunk, size_t* o_offset){
 		w_edge* w = __w_pool.allocate<w_edge>(1, o_chunk, o_offset);
 		new (w) w_edge();
 		return w;
