@@ -637,7 +637,7 @@ protected:
 		p_source->wn_out_edges_delta++;
 		p_target->wn_in_edges_delta++;
 
-		uint32_t id = _newEdges.fetch_add(1);
+		uint64_t id = _newEdges.fetch_add(1);
 		p_edge->we_numerical_id = id;
 
 		return out_edge;
@@ -2154,11 +2154,11 @@ private:
 	volatile node_t _next_new_node_id;
 
 	/// The number of new and deleted nodes
-	std::atomic<long> _newNodes;
-	std::atomic<long> _delNodes;
-	std::atomic<long> _newEdges;
-	std::atomic<long> _delNewEdges;
-	std::atomic<long> _delFrozenEdges;
+	std::atomic<uint64_t> _newNodes;
+	std::atomic<uint64_t> _delNodes;
+	std::atomic<uint64_t> _newEdges;
+	std::atomic<uint64_t> _delNewEdges;
+	std::atomic<uint64_t> _delFrozenEdges;
 
 
 	/*
