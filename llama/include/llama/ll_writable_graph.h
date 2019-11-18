@@ -640,6 +640,8 @@ protected:
 		uint64_t id = _newEdges.fetch_add(1);
 		p_edge->we_numerical_id = id;
 
+		assert(find_edge_in_write_store(source, target, p_source) == out_edge);
+
 		return out_edge;
 	}
 
@@ -744,19 +746,13 @@ public:
 	bool delete_edge_if_exists(node_t source, node_t target){
 	    w_node* p_source;
 	    w_node* p_target;
-	    edge_t edge_id = LL_NIL_EDGE;
+
 	    lock_nodes(source, target, p_source, p_target);
 
 //            LLAMA_DEBUG("source: " << source << ", target: " << target << ", p_source: " << p_source << ", p_target: " << p_target << ", p_source->wn_out_edges.size(): " << p_source->wn_out_edges.size());
 
 	    // search the edge id in the write store
-	    ll_edge_iterator iter;
-	    this->out_iter_begin_within_level(iter, source, p_source);
-	    for (edge_t e = out_iter_next_within_level(iter); e != LL_NIL_EDGE && edge_id == LL_NIL_EDGE; e = out_iter_next_within_level(iter) ){
-	        if(iter.last_node == target){
-	            edge_id = e; // done
-	        }
-	    }
+            edge_t edge_id = find_edge_in_write_store(source, target, p_source);
 
 	    // edge id found ?
             if (edge_id != LL_NIL_EDGE) {
@@ -2293,6 +2289,19 @@ private:
 			ll_spinlock_release(&node1->wn_lock);
 			ll_spinlock_release(&node2->wn_lock);
 		}
+	}
+
+
+	edge_t find_edge_in_write_store(node_t source, node_t target, w_node* p_source){
+            ll_edge_iterator iter;
+            out_iter_begin_within_level(iter, source, p_source);
+            for (edge_t e = out_iter_next_within_level(iter); e != LL_NIL_EDGE; e = out_iter_next_within_level(iter) ){
+                if(iter.last_node == target){
+                    return e;
+                }
+            }
+
+            return LL_NIL_EDGE;
 	}
 };
 
