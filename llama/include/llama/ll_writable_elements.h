@@ -551,20 +551,17 @@ public:
 
 	union {
 		struct {
-
-			// TODO short or unigned or int?
-
 			/// The number of added and not yet deleted out-edges
-			unsigned short wn_out_edges_delta;
+			uint32_t wn_out_edges_delta;
 
 			/// The number of added and not yet deleted in-edges
-			unsigned short wn_in_edges_delta;
+			uint32_t wn_in_edges_delta;
 
 			/// The number of deleted out-edges
-			unsigned short wn_num_deleted_out_edges;
+			uint32_t wn_num_deleted_out_edges;
 
 			/// The number of deleted in-edges
-			unsigned short wn_num_deleted_in_edges;
+			uint32_t wn_num_deleted_in_edges;
 		};
 
 		/// The "next" pointer in the free list

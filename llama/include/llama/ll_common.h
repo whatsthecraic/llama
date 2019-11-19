@@ -462,6 +462,6 @@ typedef unsigned length_t;
 #include <iostream>
 #include <mutex>
 extern std::mutex _log_mutex [[maybe_unused]];
-#define LLAMA_DEBUG(msg) { std::scoped_lock<std::mutex> lock{::_log_mutex}; std::cout << "[LLAMA (internal)::" << __FUNCTION__ << "] " << msg << std::endl; }
+#define LLAMA_DEBUG(msg) { std::scoped_lock<std::mutex> lock{::_log_mutex}; std::cout << "[LLAMA (internal), " << __FILE__ << "::" << __LINE__ << ", " << __FUNCTION__ << "] " << msg << std::endl; }
 
 
