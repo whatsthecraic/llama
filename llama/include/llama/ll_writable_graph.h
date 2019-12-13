@@ -88,6 +88,7 @@ std::atomic<int> g_active_transactions(0);
 
 
 inline static uint64_t rdtscp(){
+    asm volatile("": : :"memory"); // compiler barrier
     uint64_t rax;
     asm volatile (
     "rdtscp ; shl $32, %%rdx; or %%rdx, %%rax; "
@@ -95,6 +96,7 @@ inline static uint64_t rdtscp(){
     : /* no inputs */
     : "rcx", "rdx"
     );
+    asm volatile("": : :"memory"); // compiler barrier
     return rax;
 }
 
