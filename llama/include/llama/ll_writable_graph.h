@@ -43,6 +43,7 @@
 #include <fcntl.h>
 #include <strings.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <algorithm>
 #include <map>
@@ -86,6 +87,26 @@ std::atomic<int> g_active_transactions(0);
 #endif
 
 
+inline static uint64_t rdtscp(){
+    uint64_t rax;
+    asm volatile (
+    "rdtscp ; shl $32, %%rdx; or %%rdx, %%rax; "
+    : "=a" (rax)
+    : /* no inputs */
+    : "rcx", "rdx"
+    );
+    return rax;
+}
+
+class ll_profile{
+    uint64_t& m_variable;
+    uint64_t m_t0;
+
+public:
+    ll_profile(uint64_t& variable) : m_variable(variable), m_t0(rdtscp()){  }
+    ~ll_profile(){ m_variable += rdtscp() - m_t0; }
+};
+
 
 /**
  * The writable graph
@@ -99,7 +120,15 @@ class ll_writable_graph {
 	} affected_node_by_edge_deletion_t;
 
 
+
+
+
 public:
+
+	uint64_t m_profile_checkpoint { 0 };
+	uint64_t m_profile_add_edge_if_not_exists { 0 };
+	uint64_t m_profile_check_edge { 0 };
+	uint64_t m_profile_add_vertex { 0 };
 
 	/**
 	 * Create an instance of ll_writable_graph
@@ -157,6 +186,15 @@ public:
                 ll_spinlock_destroy(&_deletions_out_lock);
                 ll_spinlock_destroy(&_deletions_in_lock);
                 ll_spinlock_destroy(&_property_lock);
+
+
+
+                double sum  = m_profile_checkpoint + m_profile_add_edge_if_not_exists + m_profile_add_vertex;
+                std::cout << "[ll_writable_graph::profiling]" << std::endl;
+                std::cout << "add_vertex: " << m_profile_add_vertex << " cycles (" << ((m_profile_add_vertex * 100) / sum) << " %)" << std::endl;
+                std::cout << "add_edge_if_not_exists: " << m_profile_add_edge_if_not_exists << " cycles (" << ((m_profile_add_edge_if_not_exists * 100) / sum) << " %)" << std::endl;
+                std::cout << "check_edge: " << m_profile_check_edge << " cycles (" << ((m_profile_check_edge * 100) / sum) << " %)" << std::endl;
+                std::cout << "checkpoint: " << m_profile_checkpoint << " cycles (" << ((m_profile_checkpoint * 100) / sum) << " %)" << std::endl;
 	}
 	
 
@@ -317,6 +355,7 @@ public:
 	 * @return the node ID, or NIL_NODE if there is no more space in the vertex map
 	 */
 	node_t add_node() {
+	        ll_profile profiler(m_profile_add_vertex);
 
 		ll_spinlock_acquire(&_new_node_lock);
 
@@ -578,7 +617,6 @@ protected:
 	 * @return the edge ID
 	 */
 	edge_t add_edge(node_t source, node_t target, w_node* p_source, w_node* p_target) {
-
 		LL_D_NODE2_PRINT(source, target, "Add %ld --> %ld\n", source, target);
 
 		w_edge_allocator _allocator;
@@ -655,7 +693,6 @@ public:
 	 * @return the edge ID
 	 */
 	edge_t add_edge(node_t source, node_t target) {
-
 		edge_t out_edge;
 		w_node* p_source;
 		w_node* p_target;
@@ -663,6 +700,7 @@ public:
 		lock_nodes(source, target, p_source, p_target);
 		out_edge = add_edge(source, target, p_source, p_target);
 		release_nodes(p_source, p_target);
+
 
 		return out_edge;
 	}
@@ -680,6 +718,7 @@ public:
 	 * @return true if the edge was added; false if it it already exists
 	 */
 	int add_edge_if_not_exists(node_t source, node_t target, edge_t* out) {
+	    ll_profile profiler(m_profile_add_edge_if_not_exists);
 	    edge_t e;
 	    w_node* p_source;
 	    w_node* p_target;
@@ -687,6 +726,10 @@ public:
 	    lock_nodes(source, target, p_source, p_target);
 
 //	    LLAMA_DEBUG("source: " << source << ", target: " << target << ", p_source: " << p_source << ", p_target: " << p_target << ", p_source->wn_out_edges.size(): " << p_source->wn_out_edges.size());
+
+	    {
+	        ll_profile profiler(m_profile_check_edge);
+
 
 	    // first check the write store, whether there is an outgoing edge for the source
 	    for(uint64_t i = 0, sz = p_source->wn_out_edges.size(); i < sz; i++){
@@ -732,11 +775,14 @@ public:
 	        }
 	    }
 
+	    } // profile check_edge
+
 	    // the edge is not present in the write store nor in the read store, create it
 	    e = add_edge(source, target, p_source, p_target);
 	    release_nodes(p_source, p_target);
 
 	    *out = e;
+
 	    return true;
 	}
 
@@ -2046,6 +2092,7 @@ public:
 	 * @param config the loader config
 	 */
 	void checkpoint(const ll_loader_config* config = NULL) {
+	        ll_profile profiler(m_profile_checkpoint);
 
 		if (_newNodes.load() == 0
 				&& _delNodes.load() == 0
