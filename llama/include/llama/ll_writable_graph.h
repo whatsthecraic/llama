@@ -126,7 +126,7 @@ class ll_writable_graph {
 public:
 
 	uint64_t m_profile_checkpoint { 0 };
-	uint64_t m_profile_add_edge_if_not_exists { 0 };
+	uint64_t m_profile_add_edge { 0 };
 	uint64_t m_profile_check_edge { 0 };
 	uint64_t m_profile_add_vertex { 0 };
 
@@ -189,10 +189,10 @@ public:
 
 
 
-                double sum  = m_profile_checkpoint + m_profile_add_edge_if_not_exists + m_profile_add_vertex;
+                double sum  = m_profile_checkpoint + m_profile_add_edge + m_profile_add_vertex;
                 std::cout << "[ll_writable_graph::profiling]" << std::endl;
                 std::cout << "add_vertex: " << m_profile_add_vertex << " cycles (" << ((m_profile_add_vertex * 100) / sum) << " %)" << std::endl;
-                std::cout << "add_edge_if_not_exists: " << m_profile_add_edge_if_not_exists << " cycles (" << ((m_profile_add_edge_if_not_exists * 100) / sum) << " %)" << std::endl;
+                std::cout << "add_edge: " << m_profile_add_edge << " cycles (" << ((m_profile_add_edge * 100) / sum) << " %)" << std::endl;
                 std::cout << "check_edge: " << m_profile_check_edge << " cycles (" << ((m_profile_check_edge * 100) / sum) << " %)" << std::endl;
                 std::cout << "checkpoint: " << m_profile_checkpoint << " cycles (" << ((m_profile_checkpoint * 100) / sum) << " %)" << std::endl;
 	}
@@ -693,6 +693,8 @@ public:
 	 * @return the edge ID
 	 */
 	edge_t add_edge(node_t source, node_t target) {
+	        ll_profile profiler(m_profile_add_edge);
+
 		edge_t out_edge;
 		w_node* p_source;
 		w_node* p_target;
@@ -718,7 +720,7 @@ public:
 	 * @return true if the edge was added; false if it it already exists
 	 */
 	int add_edge_if_not_exists(node_t source, node_t target, edge_t* out) {
-	    ll_profile profiler(m_profile_add_edge_if_not_exists);
+	    ll_profile profiler(m_profile_add_edge);
 	    edge_t e;
 	    w_node* p_source;
 	    w_node* p_target;
