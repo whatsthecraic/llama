@@ -40,6 +40,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include <chrono>
 #include <fcntl.h>
 #include <strings.h>
 #include <unistd.h>
@@ -86,27 +87,13 @@ std::atomic<int> g_active_transactions(0);
 #define LL_TX_TIMESTAMP		0
 #endif
 
-
-inline static uint64_t rdtscp(){
-    asm volatile("": : :"memory"); // compiler barrier
-    uint64_t rax;
-    asm volatile (
-    "rdtscp ; shl $32, %%rdx; or %%rdx, %%rax; "
-    : "=a" (rax)
-    : /* no inputs */
-    : "rcx", "rdx"
-    );
-    asm volatile("": : :"memory"); // compiler barrier
-    return rax;
-}
-
 class ll_profile{
-    uint64_t& m_variable;
-    uint64_t m_t0;
+    std::chrono::nanoseconds& m_variable;
+    std::chrono::steady_clock::time_point m_t0;
 
 public:
-    ll_profile(uint64_t& variable) : m_variable(variable), m_t0(rdtscp()){  }
-    ~ll_profile(){ m_variable += rdtscp() - m_t0; }
+    ll_profile(std::chrono::nanoseconds& variable) : m_variable(variable), m_t0(std::chrono::steady_clock::now()){  }
+    ~ll_profile(){ m_variable += std::chrono::steady_clock::now() - m_t0; }
 };
 
 
@@ -121,16 +108,11 @@ class ll_writable_graph {
 		std::vector<edge_t> an_deleted_edges;
 	} affected_node_by_edge_deletion_t;
 
-
-
-
-
 public:
-
-	uint64_t m_profile_checkpoint { 0 };
-	uint64_t m_profile_add_edge_if_not_exists { 0 };
-	uint64_t m_profile_check_edge { 0 };
-	uint64_t m_profile_add_vertex { 0 };
+	std::chrono::nanoseconds m_profile_add_vertex { 0 };
+	std::chrono::nanoseconds m_profile_add_edge_if_not_exists { 0 };
+	std::chrono::nanoseconds m_profile_check_edge { 0 };
+	std::chrono::nanoseconds m_profile_checkpoint { 0 };
 
 	/**
 	 * Create an instance of ll_writable_graph
@@ -191,12 +173,12 @@ public:
 
 
 
-                double sum  = m_profile_checkpoint + m_profile_add_edge_if_not_exists + m_profile_add_vertex;
+                double sum  = m_profile_checkpoint.count() + m_profile_add_edge_if_not_exists.count() + m_profile_add_vertex.count();
                 std::cout << "[ll_writable_graph::profiling]" << std::endl;
-                std::cout << "add_vertex: " << m_profile_add_vertex << " cycles (" << ((m_profile_add_vertex * 100) / sum) << " %)" << std::endl;
-                std::cout << "add_edge_if_not_exists: " << m_profile_add_edge_if_not_exists << " cycles (" << ((m_profile_add_edge_if_not_exists * 100) / sum) << " %)" << std::endl;
-                std::cout << "check_edge: " << m_profile_check_edge << " cycles (" << ((m_profile_check_edge * 100) / sum) << " %)" << std::endl;
-                std::cout << "checkpoint: " << m_profile_checkpoint << " cycles (" << ((m_profile_checkpoint * 100) / sum) << " %)" << std::endl;
+                std::cout << "add_vertex: " << std::chrono::duration_cast<std::chrono::seconds>(m_profile_add_vertex).count() << " seconds (" << ((m_profile_add_vertex.count() * 100) / sum) << " %)" << std::endl;
+                std::cout << "add_edge_if_not_exists: " << std::chrono::duration_cast<std::chrono::seconds>(m_profile_add_edge_if_not_exists).count() << " seconds (" << ((m_profile_add_edge_if_not_exists.count() * 100) / sum) << " %)" << std::endl;
+                std::cout << "check_edge: " << std::chrono::duration_cast<std::chrono::seconds>( m_profile_check_edge ).count() << " seconds (" << ((m_profile_check_edge.count() * 100) / sum) << " %)" << std::endl;
+                std::cout << "checkpoint: " << std::chrono:: duration_cast<std::chrono::seconds>(m_profile_checkpoint ).count() << " seconds (" << ((m_profile_checkpoint.count() * 100) / sum) << " %)" << std::endl;
 	}
 	
 
