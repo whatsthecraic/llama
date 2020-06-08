@@ -52,13 +52,14 @@
 //==========================================================================//
 
 #ifdef LL_COUNTERS
-std::atomic<size_t> g_iter_begin;
-std::atomic<size_t> g_iter_descend;
-std::atomic<size_t> g_iter_next;
+extern std::atomic<size_t> g_iter_begin;
+extern std::atomic<size_t> g_iter_descend;
+extern std::atomic<size_t> g_iter_next;
 
 /**
  * Clear the counters
  */
+inline
 void ll_clear_counters() {
 	g_iter_begin = 0;
 	g_iter_descend = 0;
@@ -71,6 +72,7 @@ void ll_clear_counters() {
  * @param f the output file
  * @param sep the separator
  */
+inline
 void ll_print_counters(FILE* f = stderr, const char* sep = ":\t") {
 	fprintf(f, "iter_begin%s%lu\n", sep, g_iter_begin.load());
 	fprintf(f, "iter_descend%s%lu\n", sep, g_iter_descend.load());
