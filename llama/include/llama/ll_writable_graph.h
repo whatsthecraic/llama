@@ -45,6 +45,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
@@ -85,7 +86,10 @@ std::atomic<int> g_active_transactions(0);
 #define LL_TX_TIMESTAMP		0
 #endif
 
-
+#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+extern std::atomic<uint64_t> g_llama_add_edge_check_nanosecs;
+extern std::atomic<uint64_t> g_llama_add_edge_total_nanosecs;
+#endif
 
 /**
  * The writable graph
@@ -680,9 +684,15 @@ public:
 	 * @return true if the edge was added; false if it it already exists
 	 */
 	int add_edge_if_not_exists(node_t source, node_t target, edge_t* out) {
+	    using namespace std::chrono;
+
 	    edge_t e;
 	    w_node* p_source;
 	    w_node* p_target;
+#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+	    auto t_start = steady_clock::now();
+#endif
+
 
 	    lock_nodes(source, target, p_source, p_target);
 
@@ -706,6 +716,13 @@ public:
 
                 *out = w->we_public_id;
                 release_nodes(p_source, p_target);
+
+#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+                auto t_total = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
+                g_llama_add_edge_check_nanosecs += t_total;
+                g_llama_add_edge_total_nanosecs += t_total;
+#endif
+
                 return inserted;
 	    }
 
@@ -728,15 +745,35 @@ public:
 
 	            *out = e;
 	            release_nodes(p_source, p_target);
+
+#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+                auto t_total = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
+                g_llama_add_edge_check_nanosecs += t_total;
+                g_llama_add_edge_total_nanosecs += t_total;
+#endif
 	            return inserted;
 	        }
 	    }
+
+#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+	    __asm__ __volatile__("": : :"memory"); // compiler barrier
+	    auto t_check = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
+	    __asm__ __volatile__("": : :"memory"); // compiler barrier
+#endif
 
 	    // the edge is not present in the write store nor in the read store, create it
 	    e = add_edge(source, target, p_source, p_target);
 	    release_nodes(p_source, p_target);
 
 	    *out = e;
+
+#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+	    __asm__ __volatile__("": : :"memory"); // compiler barrier
+	    auto t_total = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
+            g_llama_add_edge_check_nanosecs += t_check;
+            g_llama_add_edge_total_nanosecs += t_total;
+#endif
+
 	    return true;
 	}
 
