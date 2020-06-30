@@ -86,7 +86,7 @@ std::atomic<int> g_active_transactions(0);
 #define LL_TX_TIMESTAMP		0
 #endif
 
-#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+#if defined(LL_PROFILE_UPDATES)
 extern std::atomic<uint64_t> g_llama_add_edge_check_nanosecs;
 extern std::atomic<uint64_t> g_llama_add_edge_total_nanosecs;
 #endif
@@ -689,7 +689,7 @@ public:
 	    edge_t e;
 	    w_node* p_source;
 	    w_node* p_target;
-#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+#if defined(LL_PROFILE_UPDATES)
 	    auto t_start = steady_clock::now();
 #endif
 
@@ -717,7 +717,7 @@ public:
                 *out = w->we_public_id;
                 release_nodes(p_source, p_target);
 
-#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+#if defined(LL_PROFILE_UPDATES)
                 auto t_total = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
                 g_llama_add_edge_check_nanosecs += t_total;
                 g_llama_add_edge_total_nanosecs += t_total;
@@ -746,7 +746,7 @@ public:
 	            *out = e;
 	            release_nodes(p_source, p_target);
 
-#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+#if defined(LL_PROFILE_UPDATES)
                 auto t_total = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
                 g_llama_add_edge_check_nanosecs += t_total;
                 g_llama_add_edge_total_nanosecs += t_total;
@@ -755,7 +755,7 @@ public:
 	        }
 	    }
 
-#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+#if defined(LL_PROFILE_UPDATES)
 	    __asm__ __volatile__("": : :"memory"); // compiler barrier
 	    auto t_check = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
 	    __asm__ __volatile__("": : :"memory"); // compiler barrier
@@ -767,7 +767,7 @@ public:
 
 	    *out = e;
 
-#if defined(LLAMA_PROFILE_ADD_EDGE_IF_NOT_EXISTS)
+#if defined(LL_PROFILE_UPDATES)
 	    __asm__ __volatile__("": : :"memory"); // compiler barrier
 	    auto t_total = duration_cast<nanoseconds>(steady_clock::now() - t_start).count();
             g_llama_add_edge_check_nanosecs += t_check;
