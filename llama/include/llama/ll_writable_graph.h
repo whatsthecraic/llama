@@ -86,7 +86,9 @@ std::atomic<int> g_active_transactions(0);
 #define LL_TX_TIMESTAMP		0
 #endif
 
+
 #if defined(LL_PROFILE_UPDATES)
+extern std::atomic<uint64_t> g_llama_add_node_nanosecs;
 extern std::atomic<uint64_t> g_llama_add_edge_check_nanosecs;
 extern std::atomic<uint64_t> g_llama_add_edge_total_nanosecs;
 #endif
@@ -321,6 +323,9 @@ public:
 	 * @return the node ID, or NIL_NODE if there is no more space in the vertex map
 	 */
 	node_t add_node() {
+#if defined(LL_PROFILE_UPDATES)
+	        auto t_start = std::chrono::steady_clock::now();
+#endif
 
 		ll_spinlock_acquire(&_new_node_lock);
 
@@ -348,6 +353,11 @@ public:
 		_newNodes++;
 		ll_spinlock_release(&_new_node_lock);
 
+#if defined(LL_PROFILE_UPDATES)
+                auto t_end = std::chrono::steady_clock::now();
+                g_llama_add_node_nanosecs += std::chrono::duration_cast<std::chrono::nanoseconds>(t_end - t_start).count();
+#endif
+
 		return n;
 	}
 
@@ -360,10 +370,17 @@ public:
 	 */
 	bool add_node(node_t id) {
 
+#if defined(LL_PROFILE_UPDATES)
+                auto t_start = std::chrono::steady_clock::now();
+#endif
+
 		ll_spinlock_acquire(&_new_node_lock);
 
 		if (id >= (node_t) _vertices.size()) {
 			ll_spinlock_release(&_new_node_lock);
+#if defined(LL_PROFILE_UPDATES)
+                        g_llama_add_node_nanosecs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t_start).count();
+#endif
 			return false;
 		}
 
@@ -374,6 +391,9 @@ public:
 		_next_new_node_id = std::max(id +1, (node_t) _next_new_node_id);
 		if (node_exists(id)) {
 			ll_spinlock_release(&_new_node_lock);
+#if defined(LL_PROFILE_UPDATES)
+                        g_llama_add_node_nanosecs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t_start).count();
+#endif
 			return false;
 		}
 
@@ -388,6 +408,10 @@ public:
 
 		_newNodes++;	// TODO Make checkpointing to work
 		ll_spinlock_release(&_new_node_lock);
+
+#if defined(LL_PROFILE_UPDATES)
+                g_llama_add_node_nanosecs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t_start).count();
+#endif
 
 		return true;
 	}
